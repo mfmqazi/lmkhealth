@@ -204,8 +204,36 @@ class ChatParser:
                     if vid_match:
                         video_map[vid_match.group(1)] = i
 
-            # Process Transcripts
-            for block in sections[1:]:
+            # Process Transcripts from separate file if not found in sections
+            transcript_source = sections[1:] if len(sections) > 1 else []
+            
+            # Process Transcripts from separate file if not found in sections
+            transcript_source = sections[1:] if len(sections) > 1 else []
+            
+            # Check for external transcript file
+            # Assuming CWD is project root
+            external_transcript_file = os.path.join(os.getcwd(), "youtube_transcripts.txt")
+            
+            if len(transcript_source) == 0:
+                print(f"Checking for transcript file at: {external_transcript_file}")
+                if os.path.exists(external_transcript_file):
+                    print("Reading external transcripts...")
+                    try:
+                        with open(external_transcript_file, 'r', encoding='utf-8') as tf:
+                            t_content = tf.read()
+                            transcript_source = t_content.split('================================================================')
+                            print(f"Found {len(transcript_source)} blocks in transcript file.")
+                    except Exception as e:
+                        print(f"Error reading transcript file: {e}")
+                else:
+                    print("Transcript file not found!")
+
+            print(f"Video Map size: {len(video_map)}")
+            if len(video_map) > 0:
+                print(f"Sample Video Map Keys: {list(video_map.keys())[:5]}")
+
+            count_external = 0
+            for block in transcript_source:
                 block = block.strip()
                 if not block: continue
                 
@@ -215,23 +243,39 @@ class ChatParser:
                 if block_url:
                     vid_match = re.search(r'(?:v=|youtu\.be/|embed/)([\w\-]+)', block_url)
                     if vid_match:
-                        vid_id = vid_match.group(1)
+                        vid_id = vid_match.group(1).strip()
                         if vid_id in video_map:
                             target_msg_idx = video_map[vid_id]
-                
+                        else:
+                             if count_external == 0: # Print first failure only
+                                 print(f"Missed match for ID: '{vid_id}'. URL: {block_url}")
+                                 
                 if target_msg_idx != -1:
+                    count_external += 1
                     ref_msg = all_messages[target_msg_idx]
+                    # Clean up block: Remove the [Video Transcript] header part
+                    lines = block.splitlines()
+                    content_start = 0
+                    for i, line in enumerate(lines):
+                        if line.startswith("URL:"):
+                            content_start = i + 1
+                            break
+                    
+                    clean_content = "\n".join(lines[content_start:]).strip()
+                    if not clean_content: continue
+
                     transcript_msg = {
                         "type": "transcript", 
                         "time_obj": ref_msg["time_obj"] + timedelta(seconds=1), 
                         "time": "Transcript",
                         "sender": "Archive Bot",
-                        "content": self.clean_transcript(block),
+                        "content": clean_content,
                         "is_video": False,
                         "video_url": None,
                         "image_url": None
                     }
                     all_messages.append(transcript_msg)
+            print(f"Injected {count_external} transcripts from external file.")
                 
             # Sort all messages by time
             all_messages.sort(key=lambda x: x["time_obj"])

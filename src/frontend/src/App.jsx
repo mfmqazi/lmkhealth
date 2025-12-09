@@ -389,8 +389,8 @@ function App() {
                               )}
                             </button>
                           )}
-                          {/* Show summarize for transcripts OR long text messages (>300 chars) */}
-                          {(isTranscriptType || (msg.type === 'text' && msg.content.length > 300)) && (
+                          {/* Show summarize for transcripts OR long text messages (>300 chars) that are NOT in production */}
+                          {!IS_PROD && (isTranscriptType || (msg.type === 'text' && msg.content.length > 300)) && (
                             <button
                               onClick={() => handleSummarize(msg.content)}
                               className="text-xs font-medium text-indigo-400 hover:text-indigo-600 transition-colors flex items-center gap-1.5 p-2 rounded-lg hover:bg-indigo-50"
