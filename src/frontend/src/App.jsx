@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import ReactPlayer from 'react-player'
-import { Search, Sparkles, MessageSquare, Calendar, BookOpen, ChevronDown, ChevronUp, Image as ImageIcon, Layers } from 'lucide-react'
+import { Search, Sparkles, MessageSquare, Calendar, BookOpen, ChevronDown, ChevronUp, Image as ImageIcon, Layers, Settings } from 'lucide-react'
 
 // Production detection and URL helper
 const IS_PROD = import.meta.env.PROD;
@@ -28,6 +28,14 @@ function App() {
   const [summary, setSummary] = useState('')
   const [loadingSummary, setLoadingSummary] = useState(false)
   const [expandedTranscripts, setExpandedTranscripts] = useState({})
+  const [showSettings, setShowSettings] = useState(false)
+  const [groqKey, setGroqKey] = useState(() => localStorage.getItem('groq_api_key') || '')
+
+  const saveKey = (key) => {
+    setGroqKey(key)
+    localStorage.setItem('groq_api_key', key)
+    setShowSettings(false)
+  }
 
   // Helper to highlight text matching the search query
   const highlightText = (text) => {
@@ -97,19 +105,56 @@ function App() {
   }
 
   const handleSummarize = async (text) => {
-    if (IS_PROD) {
-      alert("AI Summarization requires the backend server and is not available in this archived view.");
+    if (IS_PROD && !groqKey) {
+      setShowSettings(true)
       return;
     }
+
     setLoadingSummary(true)
     setSummary('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
+
     try {
-      const res = await axios.post(`${API_BASE}/summary`, { text })
-      setSummary(res.data.summary)
+      if (IS_PROD || groqKey) {
+        // Client-side summarization using Groq
+        if (!groqKey) {
+          throw new Error("Missing Groq API Key");
+        }
+
+        const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${groqKey}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            messages: [
+              { role: "system", content: "You are a helpful assistant that summarizes text concisely." },
+              { role: "user", content: `Please summarize the following text:\n\n${text}` }
+            ],
+            model: "llama-3.3-70b-versatile",
+            temperature: 0.5,
+            max_tokens: 1024
+          })
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.error?.message || "Groq request failed");
+        }
+
+        const data = await response.json();
+        setSummary(data.choices[0]?.message?.content || "No summary generated.");
+
+      } else {
+        // Dev mode backend fallback
+        const res = await axios.post(`${API_BASE}/summary`, { text })
+        setSummary(res.data.summary)
+      }
     } catch (err) {
       console.error(err)
-      alert("Failed to generate summary. Backend may be offline.")
+      alert(`Failed to generate summary: ${err.message}`)
+      if (err.message.includes("Key")) setShowSettings(true);
     } finally {
       setLoadingSummary(false)
     }
@@ -171,6 +216,14 @@ function App() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
+
+            <button
+              onClick={() => setShowSettings(true)}
+              className="p-2.5 bg-white text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl shadow-sm border border-indigo-100 transition-all duration-300"
+              title="Settings"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
           </div>
         </header>
 
@@ -425,6 +478,52 @@ function App() {
           </div>
         </main>
       </div>
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in">
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <Settings className="w-5 h-5 text-indigo-500" />
+                Settings
+              </h3>
+              <button onClick={() => setShowSettings(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                ✕
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">Groq API Key</label>
+                <p className="text-xs text-gray-500 mb-3">
+                  Required for AI features in archived view. Your key is stored locally in your browser.
+                </p>
+                <input
+                  type="password"
+                  className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none"
+                  placeholder="gsk_..."
+                  value={groqKey}
+                  onChange={(e) => setGroqKey(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="p-6 bg-gray-50 flex justify-end gap-3">
+              <button
+                onClick={() => setShowSettings(false)}
+                className="px-5 py-2.5 rounded-xl font-medium text-gray-600 hover:bg-gray-200 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => saveKey(groqKey)}
+                className="px-5 py-2.5 rounded-xl font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-500/30 transition-all transform hover:-translate-y-0.5"
+              >
+                Save Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

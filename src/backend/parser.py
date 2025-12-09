@@ -188,13 +188,31 @@ class ChatParser:
                 else:
                     # Continuation of previous message
                     if all_messages:
-                        all_messages[-1]["content"] += "\n" + line
-                        # Re-check for URL if not found yet
-                        if not all_messages[-1]["is_video"]:
-                            url = self.extract_video_url(all_messages[-1]["content"])
-                            if url:
-                                all_messages[-1]["is_video"] = True
-                                all_messages[-1]["video_url"] = url
+                        # Check if this NEW line has a video URL
+                        new_line_url = self.extract_video_url(line)
+                        last_msg = all_messages[-1]
+                        
+                        # If previous message ALREADY has a video, and this line has a DIFFERENT video
+                        if last_msg["is_video"] and new_line_url and new_line_url != last_msg["video_url"]:
+                            # Create a new message for this video to allow multiple videos in one "block"
+                            split_msg = last_msg.copy()
+                            split_msg["content"] = line
+                            split_msg["video_url"] = new_line_url
+                            split_msg["is_video"] = True
+                            split_msg["image_url"] = None
+                            # Offset time slightly to preserve order
+                            split_msg["time_obj"] = last_msg["time_obj"] + timedelta(milliseconds=100)
+                            
+                            all_messages.append(split_msg)
+                        else:
+                            # Standard continuation
+                            all_messages[-1]["content"] += "\n" + line
+                            # Re-check for URL if not found yet
+                            if not all_messages[-1]["is_video"]:
+                                url = self.extract_video_url(all_messages[-1]["content"])
+                                if url:
+                                    all_messages[-1]["is_video"] = True
+                                    all_messages[-1]["video_url"] = url
 
             # Map video IDs to message indices
             video_map = {}
@@ -247,8 +265,7 @@ class ChatParser:
                         if vid_id in video_map:
                             target_msg_idx = video_map[vid_id]
                         else:
-                             if count_external == 0: # Print first failure only
-                                 print(f"Missed match for ID: '{vid_id}'. URL: {block_url}")
+                             print(f"Missed match for ID: '{vid_id}'. URL: {block_url}")
                                  
                 if target_msg_idx != -1:
                     count_external += 1
