@@ -415,11 +415,11 @@ function App() {
 
                             {/* Image Display */}
                             {isImage && (
-                              <div className="mt-5 rounded-2xl overflow-hidden shadow-xl border-4 border-white transform transition-transform duration-500 hover:scale-[1.01]">
+                              <div className="mt-5 py-4 rounded-2xl overflow-hidden shadow-xl border-4 border-white transform transition-transform duration-500 hover:scale-[1.01]">
                                 <img
                                   src={resolveAssetUrl(msg.content)}
                                   alt="Gallery Item"
-                                  className="w-full h-auto max-h-[600px] object-cover"
+                                  className="w-full h-auto max-h-[600px] object-contain"
                                   loading="lazy"
                                 />
                               </div>
