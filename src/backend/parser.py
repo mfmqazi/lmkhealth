@@ -1,5 +1,6 @@
 import re
 import os
+import unicodedata
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
 
@@ -152,25 +153,22 @@ class ChatParser:
 
                     else:
                         # Skip system messages
-                        matches_system = False
-                        system_phrases = [
-                            "joined using this group's invite link",
-                            "joined using a group link",
-                            "security code changed",
-                            "added you",
-                            "left"
-                        ]
-                        for phrase in system_phrases:
-                            if phrase in msg_content:
-                                matches_system = True
-                                break
+                        # Clean invisible control characters
+                        msg_content = "".join(ch for ch in msg_content if unicodedata.category(ch)[0] != "C")
                         
-                        if matches_system:
+                        # Skip system messages - Aggressive Filter
+                        lower_content = msg_content.lower()
+                        if "joined using a group" in lower_content or "joined using this group" in lower_content:
                              continue
+                        if "security code changed" in lower_content:
+                             continue
+                        if "added" in lower_content:
+                            # Check for patterns like "added +1..." or "added ~..." or "added you"
+                            if re.search(r'added\s+[\+~]', msg_content) or "added you" in lower_content:
+                                continue
+                        if lower_content.strip() == "left":
+                            continue
 
-                        if re.search(r'added \+?\d+', msg_content):
-                             continue
-                             
                         url = self.extract_video_url(msg_content)
                     
                     message_obj = {

@@ -77,7 +77,7 @@ function App() {
     try {
       // In prod, use static JSON. in Dev, use API.
       const url = IS_PROD
-        ? `${import.meta.env.BASE_URL}timeline.json`
+        ? `${import.meta.env.BASE_URL}timeline.json?v=2`
         : 'http://localhost:8001/api/timeline';
 
       const res = await axios.get(url)
@@ -128,7 +128,7 @@ function App() {
     return match ? match[0] : null
   }
 
-  const bgPattern = IS_PROD ? `${import.meta.env.BASE_URL}bg-pattern.png` : '/bg-pattern.png';
+  const bgPattern = IS_PROD ? `${import.meta.env.BASE_URL}bg-pattern.png?v=2` : '/bg-pattern.png';
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800 pb-32 transition-colors duration-500 relative">
