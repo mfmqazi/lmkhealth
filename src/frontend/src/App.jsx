@@ -3,8 +3,22 @@ import axios from 'axios'
 import ReactPlayer from 'react-player'
 import { Search, Sparkles, MessageSquare, Calendar, BookOpen, ChevronDown, ChevronUp, Image as ImageIcon, Layers } from 'lucide-react'
 
-const API_BASE = 'http://localhost:8001/api'
-const IMAGE_BASE = 'http://localhost:8001'
+// Production detection and URL helper
+const IS_PROD = import.meta.env.PROD;
+
+const resolveAssetUrl = (path) => {
+  if (!path) return '';
+  if (path.startsWith('http')) return path;
+  if (IS_PROD) {
+    // In prod, assets are served relative to the base URL
+    // import.meta.env.BASE_URL usually ends with a slash
+    const base = import.meta.env.BASE_URL;
+    const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+    return `${base}${cleanPath}`;
+  }
+  // In dev, assuming the backend specific port if not proxied
+  return `http://localhost:8001${path}`;
+};
 
 function App() {
   const [timeline, setTimeline] = useState([])
@@ -46,11 +60,24 @@ function App() {
 
   const fetchTimeline = async () => {
     try {
-      const res = await axios.get(`${API_BASE}/timeline`)
+      // In prod, use static JSON. in Dev, use API.
+      const url = IS_PROD
+        ? `${import.meta.env.BASE_URL}timeline.json`
+        : 'http://localhost:8001/api/timeline';
+
+      const res = await axios.get(url)
       setTimeline(res.data)
       setFilteredTimeline(res.data)
     } catch (err) {
       console.error("Failed to fetch timeline", err)
+      // Fallback in dev to look for local file if backend is down
+      if (!IS_PROD) {
+        try {
+          const res = await axios.get('/timeline.json');
+          setTimeline(res.data);
+          setFilteredTimeline(res.data);
+        } catch (e) {/* ignore */ }
+      }
     }
   }
 
@@ -346,7 +373,7 @@ function App() {
                         {isImage && (
                           <div className="mt-1 rounded-lg overflow-hidden">
                             <img
-                              src={`${IMAGE_BASE}${msg.content}`}
+                              src={resolveAssetUrl(msg.content)}
                               alt="Gallery Item"
                               className="w-full h-auto max-h-[500px] object-cover"
                               loading="lazy"
