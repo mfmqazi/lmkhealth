@@ -165,7 +165,7 @@ function App() {
         <div className="flex items-center justify-between mb-6 px-1">
           <h2 className="text-sm font-bold text-indigo-900/60 uppercase tracking-widest flex items-center gap-2">
             <Calendar className="w-4 h-4" />
-            October 2025 (Batch 1)
+            October 2025
           </h2>
         </div>
 
