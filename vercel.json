@@ -1,0 +1,14 @@
+{
+    "devCommand": "npm run dev",
+    "build": {
+        "env": {
+            "PYTHON_VERSION": "3.9"
+        }
+    },
+    "rewrites": [
+        {
+            "source": "/api/(.*)",
+            "destination": "/src/backend/main.py"
+        }
+    ]
+}
