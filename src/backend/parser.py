@@ -169,7 +169,9 @@ class ChatParser:
                         if lower_content.strip() == "left":
                             continue
 
-                        if "END OF POST" in msg_content:
+                        # Check for transcript markers (case insensitive)
+                        upper_msg = msg_content.upper()
+                        if "END OF POST" in upper_msg or "END OF BLOG" in upper_msg:
                             msg_type = "transcript"
 
                         url = self.extract_video_url(msg_content)
