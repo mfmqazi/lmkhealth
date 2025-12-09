@@ -77,7 +77,7 @@ function App() {
     try {
       // In prod, use static JSON. in Dev, use API.
       const url = IS_PROD
-        ? `${import.meta.env.BASE_URL}timeline.json?v=2`
+        ? `${import.meta.env.BASE_URL}timeline.json?v=3`
         : 'http://localhost:8001/api/timeline';
 
       const res = await axios.get(url)
@@ -97,6 +97,10 @@ function App() {
   }
 
   const handleSummarize = async (text) => {
+    if (IS_PROD) {
+      alert("AI Summarization requires the backend server and is not available in this archived view.");
+      return;
+    }
     setLoadingSummary(true)
     setSummary('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -105,7 +109,7 @@ function App() {
       setSummary(res.data.summary)
     } catch (err) {
       console.error(err)
-      alert("Failed to generate summary")
+      alert("Failed to generate summary. Backend may be offline.")
     } finally {
       setLoadingSummary(false)
     }
@@ -389,8 +393,8 @@ function App() {
                               )}
                             </button>
                           )}
-                          {/* Show summarize for transcripts OR long text messages (>300 chars) that are NOT in production */}
-                          {!IS_PROD && (isTranscriptType || (msg.type === 'text' && msg.content.length > 300)) && (
+                          {/* Show summarize for transcripts OR long text messages (>300 chars) */}
+                          {(isTranscriptType || (msg.type === 'text' && msg.content.length > 300)) && (
                             <button
                               onClick={() => handleSummarize(msg.content)}
                               className="text-xs font-medium text-indigo-400 hover:text-indigo-600 transition-colors flex items-center gap-1.5 p-2 rounded-lg hover:bg-indigo-50"
