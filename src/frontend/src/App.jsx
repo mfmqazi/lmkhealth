@@ -355,7 +355,7 @@ function App() {
                             {/* Video Player Box */}
                             {showPlayer && (() => {
                               const videoIdMatch = msg.video_url.match(/(?:v=|youtu\.be\/|embed\/)([\w\-]+)/);
-                              const videoId = videoIdMatch ? videoId[1] : null;
+                              const videoId = videoIdMatch ? videoIdMatch[1] : null;
                               const thumbnailUrl = videoId
                                 ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
                                 : null;
