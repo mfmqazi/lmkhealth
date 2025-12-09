@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "homepage": "https://mfmqazi.github.io/spinning-quasar",
+  "homepage": "https://mfmqazi.github.io/lmkhealth",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
