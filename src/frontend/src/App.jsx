@@ -249,7 +249,10 @@ function App() {
                 <div className="space-y-8">
                   {day.messages.map((msg, msgIndex) => {
                     const isImage = msg.type === 'image'
-                    const isTranscript = msg.type === 'transcript' || (msg.content && typeof msg.content === 'string' && msg.content.includes("[Video Transcript]"));
+                    const isTranscriptType = msg.type === 'transcript' || (msg.content && typeof msg.content === 'string' && msg.content.includes("[Video Transcript]"));
+                    const isLongText = msg.type === 'text' && msg.content && msg.content.length > 800;
+                    const isCollapsible = isTranscriptType || isLongText;
+
                     const uniqueId = `${day.date}-${msgIndex}`
                     const expanded = expandedTranscripts[uniqueId]
                     const showPlayer = Boolean(msg.video_url)
@@ -257,23 +260,23 @@ function App() {
                     return (
                       <div
                         key={msgIndex}
-                        className={`group relative p-6 sm:p-8 rounded-[2rem] transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 border ${isTranscript
+                        className={`group relative p-6 sm:p-8 rounded-[2rem] transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 border ${isTranscriptType
                           ? 'bg-gradient-to-br from-amber-50 via-orange-50/30 to-white border-orange-100/60'
                           : 'bg-white border-indigo-50/60 shadow-xl shadow-indigo-100/10'
                           }`}
                       >
                         {/* Sender Avatar & Name */}
                         <div className="flex items-start gap-5 mb-4">
-                          <div className={`mt-1 w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold shadow-lg transform group-hover:rotate-6 transition-transform duration-300 ${isTranscript ? 'bg-gradient-to-br from-orange-100 to-amber-100 text-orange-600' : 'bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600'
+                          <div className={`mt-1 w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold shadow-lg transform group-hover:rotate-6 transition-transform duration-300 ${isTranscriptType ? 'bg-gradient-to-br from-orange-100 to-amber-100 text-orange-600' : 'bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600'
                             }`}>
                             {msg.sender.charAt(0).toUpperCase()}
                           </div>
 
                           <div className="flex-1 min-w-0">
                             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-baseline mb-2">
-                              <h3 className={`font-bold text-lg truncate ${isTranscript ? 'text-orange-900' : 'text-slate-800'
+                              <h3 className={`font-bold text-lg truncate ${isTranscriptType ? 'text-orange-900' : 'text-slate-800'
                                 }`}>
-                                {isTranscript ? "Video Transcript" : highlightText(msg.sender)}
+                                {isTranscriptType ? "Video Transcript" : highlightText(msg.sender)}
                               </h3>
                               <span className="text-xs font-semibold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-100 w-fit mt-1 sm:mt-0">
                                 {msg.time}
@@ -281,14 +284,14 @@ function App() {
                             </div>
 
                             {/* Message Content */}
-                            <div className={`text-[17px] leading-relaxed break-words font-medium ${isTranscript ? 'text-slate-600 italic' : 'text-slate-600'
+                            <div className={`text-[17px] leading-relaxed break-words font-medium ${isTranscriptType ? 'text-slate-600 italic' : 'text-slate-600'
                               }`}>
-                              {isTranscript ? (
+                              {isCollapsible ? (
                                 <div>
                                   <div className={`relative ${!expanded ? 'line-clamp-4' : ''}`}>
                                     {highlightText(msg.content)}
                                     {!expanded && (
-                                      <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-amber-50 to-transparent pointer-events-none" />
+                                      <div className={`absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t pointer-events-none ${isTranscriptType ? 'from-amber-50' : 'from-white'}`} />
                                     )}
                                   </div>
                                 </div>
@@ -374,7 +377,7 @@ function App() {
 
                         {/* Footer Actions */}
                         <div className="pl-[4.25rem] flex items-center justify-end mt-4 pt-3 border-t border-dashed border-indigo-100/50 gap-3">
-                          {isTranscript && (
+                          {isCollapsible && (
                             <button
                               onClick={() => toggleTranscript(uniqueId)}
                               className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 hover:text-orange-700 transition-all duration-300 group/btn"
@@ -382,12 +385,12 @@ function App() {
                               {expanded ? (
                                 <><ChevronUp className="w-3 h-3 group-hover/btn:-translate-y-0.5 transition-transform" /> Show Less</>
                               ) : (
-                                <><ChevronDown className="w-3 h-3 group-hover/btn:translate-y-0.5 transition-transform" /> Read Transcript</>
+                                <><ChevronDown className="w-3 h-3 group-hover/btn:translate-y-0.5 transition-transform" /> {isTranscriptType ? "Read Transcript" : "Read Full Text"}</>
                               )}
                             </button>
                           )}
                           {/* Show summarize for transcripts OR long text messages (>300 chars) */}
-                          {(isTranscript || (msg.type === 'text' && msg.content.length > 300)) && (
+                          {(isTranscriptType || (msg.type === 'text' && msg.content.length > 300)) && (
                             <button
                               onClick={() => handleSummarize(msg.content)}
                               className="text-xs font-medium text-indigo-400 hover:text-indigo-600 transition-colors flex items-center gap-1.5 p-2 rounded-lg hover:bg-indigo-50"
