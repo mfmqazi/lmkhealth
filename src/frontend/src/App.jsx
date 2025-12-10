@@ -300,164 +300,202 @@ function App() {
                 </div>
 
                 <div className="space-y-8">
-                  {day.messages.map((msg, msgIndex) => {
-                    const isImage = msg.type === 'image'
-                    const isTranscriptType = msg.type === 'transcript' || (msg.content && typeof msg.content === 'string' && msg.content.includes("[Video Transcript]"));
-                    const isLongText = msg.type === 'text' && msg.content && msg.content.length > 800;
-                    const isCollapsible = isTranscriptType || isLongText;
+                  {day.messages
+                    .filter(msg => msg.type !== 'transcript') // Filter out standalone transcripts
+                    .map((msg, msgIndex) => {
+                      const isImage = msg.type === 'image'
+                      const isLongText = msg.type === 'text' && msg.content && msg.content.length > 800;
+                      const isCollapsible = isLongText;
 
-                    const uniqueId = `${day.date}-${msgIndex}`
-                    const expanded = expandedTranscripts[uniqueId]
-                    const showPlayer = Boolean(msg.video_url)
+                      // Find associated transcript for this message if it has a video
+                      const associatedTranscript = msg.video_url
+                        ? day.messages.find(m =>
+                          m.type === 'transcript' &&
+                          m.video_url === msg.video_url
+                        )
+                        : null;
 
-                    return (
-                      <div
-                        key={msgIndex}
-                        className={`group relative p-6 sm:p-8 rounded-[2rem] transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 border ${isTranscriptType
-                          ? 'bg-gradient-to-br from-amber-50 via-orange-50/30 to-white border-orange-100/60'
-                          : 'bg-white border-indigo-50/60 shadow-xl shadow-indigo-100/10'
-                          }`}
-                      >
-                        {/* Sender Avatar & Name */}
-                        <div className="flex items-start gap-5 mb-4">
-                          <div className={`mt-1 w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold shadow-lg transform group-hover:rotate-6 transition-transform duration-300 ${isTranscriptType ? 'bg-gradient-to-br from-orange-100 to-amber-100 text-orange-600' : 'bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600'
-                            }`}>
-                            {msg.sender.charAt(0).toUpperCase()}
-                          </div>
+                      const uniqueId = `${day.date}-${msgIndex}`
+                      const expanded = expandedTranscripts[uniqueId]
+                      const showPlayer = Boolean(msg.video_url)
 
-                          <div className="flex-1 min-w-0">
-                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-baseline mb-2">
-                              <h3 className={`font-bold text-lg truncate ${isTranscriptType ? 'text-orange-900' : 'text-slate-800'
-                                }`}>
-                                {isTranscriptType ? "Video Transcript" : highlightText(msg.sender)}
-                              </h3>
-                              <span className="text-xs font-semibold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-100 w-fit mt-1 sm:mt-0">
-                                {msg.time}
-                              </span>
-                            </div>
-
-                            {/* Message Content */}
-                            <div className={`text-[17px] leading-relaxed break-words font-medium ${isTranscriptType ? 'text-slate-600 italic' : 'text-slate-600'
+                      return (
+                        <div
+                          key={msgIndex}
+                          className="group relative p-6 sm:p-8 rounded-[2rem] transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 border bg-white border-indigo-50/60 shadow-xl shadow-indigo-100/10"
+                        >
+                          {/* Sender Avatar & Name */}
+                          <div className="flex items-start gap-5 mb-4">
+                            <div className={`mt-1 w-12 h-12 rounded-2xl flex items-center justify-center text-lg font-bold shadow-lg transform group-hover:rotate-6 transition-transform duration-300 ${associatedTranscript ? 'bg-gradient-to-br from-orange-100 to-amber-100 text-orange-600' : 'bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600'
                               }`}>
-                              {isCollapsible ? (
-                                <div>
-                                  <div className={`relative ${!expanded ? 'line-clamp-4' : ''}`}>
-                                    {highlightText(msg.content)}
-                                    {!expanded && (
-                                      <div className={`absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t pointer-events-none ${isTranscriptType ? 'from-amber-50' : 'from-white'}`} />
-                                    )}
-                                  </div>
-                                </div>
-                              ) : (
-                                msg.type === 'text' ? (
-                                  <>
-                                    {highlightText(msg.content)}
-                                  </>
-                                ) : null
-                              )}
+                              {msg.sender.charAt(0).toUpperCase()}
                             </div>
 
-                            {/* Video Player Box */}
-                            {showPlayer && (() => {
-                              const videoIdMatch = msg.video_url.match(/(?:v=|youtu\.be\/|embed\/)([\w\-]+)/);
-                              const videoId = videoIdMatch ? videoIdMatch[1] : null;
-                              const thumbnailUrl = videoId
-                                ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
-                                : null;
-
-                              return (
-                                <div className="mt-6 bg-slate-900 rounded-2xl overflow-hidden shadow-2xl w-full max-w-[560px] mx-auto ring-4 ring-slate-50 relative group/player">
-                                  <a
-                                    href={msg.video_url}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="block relative aspect-video bg-black overflow-hidden"
-                                  >
-                                    {thumbnailUrl ? (
-                                      <img
-                                        src={thumbnailUrl}
-                                        alt="Video thumbnail"
-                                        className="w-full h-full object-cover opacity-90 group-hover/player:opacity-100 transition-all duration-700 transform group-hover/player:scale-105"
-                                        onError={(e) => {
-                                          e.target.onerror = null;
-                                          if (e.target.src.includes('hqdefault')) {
-                                            e.target.src = e.target.src.replace('hqdefault', 'mqdefault');
-                                          } else {
-                                            e.target.style.opacity = 0;
-                                          }
-                                        }}
-                                      />
-                                    ) : (
-                                      <div className="w-full h-full flex items-center justify-center text-white text-opacity-50">
-                                        No Thumbnail
-                                      </div>
-                                    )}
-                                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                                      <div className="w-16 h-16 bg-red-600/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-xl group-hover/player:scale-110 transition-transform duration-300 ring-4 ring-white/20">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-8 h-8 ml-1">
-                                          <path d="M8 5v14l11-7z" />
-                                        </svg>
-                                      </div>
-                                    </div>
-                                  </a>
-                                  <div className="px-4 py-3 bg-slate-800 border-t border-slate-700/50 flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-white">
-                                      <span className="flex h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
-                                      <span className="text-xs font-bold tracking-wide uppercase text-slate-400">YouTube</span>
-                                    </div>
-                                    <a href={msg.video_url} target="_blank" rel="noreferrer" className="text-xs font-medium text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1">
-                                      Open <span className="hidden sm:inline">in new tab</span> &rarr;
-                                    </a>
-                                  </div>
-                                </div>
-                              );
-                            })()}
-
-                            {/* Image Display */}
-                            {isImage && (
-                              <div className="mt-5 py-4 rounded-2xl overflow-hidden shadow-xl border-4 border-white transform transition-transform duration-500 hover:scale-[1.01]">
-                                <img
-                                  src={resolveAssetUrl(msg.content)}
-                                  alt="Gallery Item"
-                                  className="w-full h-auto max-h-[600px] object-contain"
-                                  loading="lazy"
-                                />
+                            <div className="flex-1 min-w-0">
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-baseline mb-2">
+                                <h3 className="font-bold text-lg truncate text-slate-800">
+                                  {highlightText(msg.sender)}
+                                </h3>
+                                <span className="text-xs font-semibold text-slate-400 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-100 w-fit mt-1 sm:mt-0">
+                                  {msg.time}
+                                </span>
                               </div>
-                            )}
 
-                          </div>
-                        </div>
+                              {/* Message Content */}
+                              <div className="text-[17px] leading-relaxed break-words font-medium text-slate-600">
+                                {isCollapsible ? (
+                                  <div>
+                                    <div className={`relative ${!expanded ? 'line-clamp-4' : ''}`}>
+                                      {highlightText(msg.content)}
+                                      {!expanded && (
+                                        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t pointer-events-none from-white" />
+                                      )}
+                                    </div>
+                                  </div>
+                                ) : (
+                                  msg.type === 'text' ? (
+                                    <>
+                                      {highlightText(msg.content)}
+                                    </>
+                                  ) : null
+                                )}
+                              </div>
 
-                        {/* Footer Actions */}
-                        <div className="pl-[4.25rem] flex items-center justify-end mt-4 pt-3 border-t border-dashed border-indigo-100/50 gap-3">
-                          {isCollapsible && (
-                            <button
-                              onClick={() => toggleTranscript(uniqueId)}
-                              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 hover:text-orange-700 transition-all duration-300 group/btn"
-                            >
-                              {expanded ? (
-                                <><ChevronUp className="w-3 h-3 group-hover/btn:-translate-y-0.5 transition-transform" /> Show Less</>
-                              ) : (
-                                <><ChevronDown className="w-3 h-3 group-hover/btn:translate-y-0.5 transition-transform" /> {isTranscriptType ? "Read Transcript" : "Read Full Text"}</>
+                              {/* Video Player Box */}
+                              {showPlayer && (() => {
+                                const videoIdMatch = msg.video_url.match(/(?:v=|youtu\.be\/|embed\/)([\w\-]+)/);
+                                const videoId = videoIdMatch ? videoIdMatch[1] : null;
+                                const thumbnailUrl = videoId
+                                  ? `https://img.youtube.com/vi/${videoId}/hqdefault.jpg`
+                                  : null;
+
+                                return (
+                                  <div className="mt-6 bg-slate-900 rounded-2xl overflow-hidden shadow-2xl w-full max-w-[560px] mx-auto ring-4 ring-slate-50 relative group/player">
+                                    <a
+                                      href={msg.video_url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="block relative aspect-video bg-black overflow-hidden"
+                                    >
+                                      {thumbnailUrl ? (
+                                        <img
+                                          src={thumbnailUrl}
+                                          alt="Video thumbnail"
+                                          className="w-full h-full object-cover opacity-90 group-hover/player:opacity-100 transition-all duration-700 transform group-hover/player:scale-105"
+                                          onError={(e) => {
+                                            e.target.onerror = null;
+                                            if (e.target.src.includes('hqdefault')) {
+                                              e.target.src = e.target.src.replace('hqdefault', 'mqdefault');
+                                            } else {
+                                              e.target.style.opacity = 0;
+                                            }
+                                          }}
+                                        />
+                                      ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-white text-opacity-50">
+                                          No Thumbnail
+                                        </div>
+                                      )}
+                                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                                        <div className="w-16 h-16 bg-red-600/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-xl group-hover/player:scale-110 transition-transform duration-300 ring-4 ring-white/20">
+                                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-8 h-8 ml-1">
+                                            <path d="M8 5v14l11-7z" />
+                                          </svg>
+                                        </div>
+                                      </div>
+                                    </a>
+                                    <div className="px-4 py-3 bg-slate-800 border-t border-slate-700/50 flex items-center justify-between">
+                                      <div className="flex items-center gap-2 text-white">
+                                        <span className="flex h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
+                                        <span className="text-xs font-bold tracking-wide uppercase text-slate-400">YouTube</span>
+                                      </div>
+                                      <a href={msg.video_url} target="_blank" rel="noreferrer" className="text-xs font-medium text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1">
+                                        Open <span className="hidden sm:inline">in new tab</span> &rarr;
+                                      </a>
+                                    </div>
+                                  </div>
+                                );
+                              })()}
+
+                              {/* Transcript Display - Below Video */}
+                              {associatedTranscript && (
+                                <div className="mt-6 bg-gradient-to-br from-amber-50 via-orange-50/30 to-white border border-orange-100/60 rounded-2xl p-6 shadow-lg">
+                                  <div className="flex items-center justify-between mb-3">
+                                    <h4 className="font-bold text-orange-900 flex items-center gap-2">
+                                      <span className="text-lg">📝</span>
+                                      Video Transcript
+                                    </h4>
+                                    <button
+                                      onClick={() => handleSummarize(associatedTranscript.content)}
+                                      className="text-xs font-medium text-indigo-400 hover:text-indigo-600 transition-colors flex items-center gap-1.5 p-2 rounded-lg hover:bg-indigo-50"
+                                      title="Summarize using AI"
+                                    >
+                                      <Sparkles className="w-4 h-4" />
+                                      Summarize
+                                    </button>
+                                  </div>
+                                  <div className={`text-[15px] leading-relaxed text-slate-600 italic ${!expandedTranscripts[`transcript-${uniqueId}`] ? 'line-clamp-3' : ''}`}>
+                                    {associatedTranscript.content}
+                                  </div>
+                                  <button
+                                    onClick={() => toggleTranscript(`transcript-${uniqueId}`)}
+                                    className="mt-3 flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-orange-600 bg-orange-50 hover:bg-orange-100 hover:text-orange-700 transition-all duration-300 group/btn"
+                                  >
+                                    {expandedTranscripts[`transcript-${uniqueId}`] ? (
+                                      <><ChevronUp className="w-3 h-3 group-hover/btn:-translate-y-0.5 transition-transform" /> Show Less</>
+                                    ) : (
+                                      <><ChevronDown className="w-3 h-3 group-hover/btn:translate-y-0.5 transition-transform" /> Read Full Transcript</>
+                                    )}
+                                  </button>
+                                </div>
                               )}
-                            </button>
-                          )}
-                          {/* Show summarize for transcripts OR long text messages (>300 chars) */}
-                          {(isTranscriptType || (msg.type === 'text' && msg.content.length > 300)) && (
-                            <button
-                              onClick={() => handleSummarize(msg.content)}
-                              className="text-xs font-medium text-indigo-400 hover:text-indigo-600 transition-colors flex items-center gap-1.5 p-2 rounded-lg hover:bg-indigo-50"
-                              title="Summarize using AI"
-                            >
-                              <Sparkles className="w-3.5 h-3.5" />
-                              <span className="hidden sm:inline">Summarize</span>
-                            </button>
-                          )}
-                        </div>
 
-                      </div>
-                    )
-                  })}
+
+                              {/* Image Display */}
+                              {isImage && (
+                                <div className="mt-5 py-4 rounded-2xl overflow-hidden shadow-xl border-4 border-white transform transition-transform duration-500 hover:scale-[1.01]">
+                                  <img
+                                    src={resolveAssetUrl(msg.content)}
+                                    alt="Gallery Item"
+                                    className="w-full h-auto max-h-[600px] object-contain"
+                                    loading="lazy"
+                                  />
+                                </div>
+                              )}
+
+                            </div>
+                          </div>
+
+                          {/* Footer Actions */}
+                          <div className="pl-[4.25rem] flex items-center justify-end mt-4 pt-3 border-t border-dashed border-indigo-100/50 gap-3">
+                            {isCollapsible && (
+                              <button
+                                onClick={() => toggleTranscript(uniqueId)}
+                                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 hover:text-indigo-700 transition-all duration-300 group/btn"
+                              >
+                                {expanded ? (
+                                  <><ChevronUp className="w-3 h-3 group-hover/btn:-translate-y-0.5 transition-transform" /> Show Less</>
+                                ) : (
+                                  <><ChevronDown className="w-3 h-3 group-hover/btn:translate-y-0.5 transition-transform" /> Read Full Text</>
+                                )}
+                              </button>
+                            )}
+                            {/* Show summarize for long text messages (>300 chars) */}
+                            {(msg.type === 'text' && msg.content.length > 300) && (
+                              <button
+                                onClick={() => handleSummarize(msg.content)}
+                                className="text-xs font-medium text-indigo-400 hover:text-indigo-600 transition-colors flex items-center gap-1.5 p-2 rounded-lg hover:bg-indigo-50"
+                                title="Summarize using AI"
+                              >
+                                <Sparkles className="w-3.5 h-3.5" />
+                                <span className="hidden sm:inline">Summarize</span>
+                              </button>
+                            )}
+                          </div>
+
+                        </div>
+                      )
+                    })}
                 </div>
               </div>
             ))}
