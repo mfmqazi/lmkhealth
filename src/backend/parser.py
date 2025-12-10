@@ -214,13 +214,16 @@ class ChatParser:
                                     all_messages[-1]["is_video"] = True
                                     all_messages[-1]["video_url"] = url
 
-            # Map video IDs to message indices
+            # Map video IDs to message indices (store ALL occurrences, not just first)
             video_map = {}
             for i, msg in enumerate(all_messages):
                 if msg["is_video"] and msg["video_url"]:
                     vid_match = re.search(r'(?:v=|youtu\.be/|embed/)([\w\-]+)', msg["video_url"])
                     if vid_match:
-                        video_map[vid_match.group(1)] = i
+                        video_id = vid_match.group(1)
+                        if video_id not in video_map:
+                            video_map[video_id] = []
+                        video_map[video_id].append(i)
 
             # Process Transcripts from separate file if not found in sections
             transcript_source = sections[1:] if len(sections) > 1 else []
@@ -252,22 +255,22 @@ class ChatParser:
                             if not clean_content: return
                             
                             if current_vid_id in video_map:
-                                target_msg_idx = video_map[current_vid_id]
-                                ref_msg = all_messages[target_msg_idx]
-                                
-                                transcript_msg = {
-                                    "type": "transcript", 
-                                    "time_obj": ref_msg["time_obj"] + timedelta(seconds=1), 
-                                    "time": "Transcript",
-                                    "sender": "Archive Bot",
-                                    "content": clean_content,
-                                    "is_video": False,
-                                    "video_url": f"https://www.youtube.com/watch?v={current_vid_id}",
-                                    "image_url": None
-                                }
-                                # print(f"DEBUG: Injecting transcript for {current_vid_id}")
-                                all_messages.append(transcript_msg)
-                                count_external += 1
+                                # Inject transcript for EACH occurrence of this video
+                                for target_msg_idx in video_map[current_vid_id]:
+                                    ref_msg = all_messages[target_msg_idx]
+                                    
+                                    transcript_msg = {
+                                        "type": "transcript", 
+                                        "time_obj": ref_msg["time_obj"] + timedelta(seconds=1), 
+                                        "time": "Transcript",
+                                        "sender": "Archive Bot",
+                                        "content": clean_content,
+                                        "is_video": False,
+                                        "video_url": f"https://www.youtube.com/watch?v={current_vid_id}",
+                                        "image_url": None
+                                    }
+                                    all_messages.append(transcript_msg)
+                                    count_external += 1
                             else:
                                 pass # print(f"Missed match for ID: {current_vid_id}")
 
