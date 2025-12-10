@@ -25,6 +25,7 @@ function App() {
   const [filteredTimeline, setFilteredTimeline] = useState([])
   const [search, setSearch] = useState('')
   const [selectedDate, setSelectedDate] = useState(null)
+  const [selectedBatch, setSelectedBatch] = useState('oct2025') // Batch selector: 'oct2025' or 'dec2025'
   const [summary, setSummary] = useState('')
   const [loadingSummary, setLoadingSummary] = useState(false)
   const [expandedTranscripts, setExpandedTranscripts] = useState({})
@@ -59,7 +60,7 @@ function App() {
 
   useEffect(() => {
     fetchTimeline()
-  }, [])
+  }, [selectedBatch])
 
   useEffect(() => {
     // 1. Filter by Search
@@ -88,20 +89,24 @@ function App() {
 
   const fetchTimeline = async () => {
     try {
+      // Determine which timeline file to load based on selected batch
+      const timelineFile = selectedBatch === 'dec2025' ? 'timeline_dec2025.json' : 'timeline.json';
+
       // In prod, use static JSON. in Dev, use API.
       const url = IS_PROD
-        ? `${import.meta.env.BASE_URL}timeline.json?v=3`
-        : 'http://localhost:8000/api/timeline';
+        ? `${import.meta.env.BASE_URL}${timelineFile}?v=4`
+        : `http://localhost:8000/api/timeline${selectedBatch === 'dec2025' ? '_dec2025' : ''}`;
 
       const res = await axios.get(url)
       setTimeline(res.data)
       setFilteredTimeline(res.data)
+      setSelectedDate(null) // Reset date filter when switching batches
     } catch (err) {
       console.error("Failed to fetch timeline", err)
       // Fallback in dev to look for local file if backend is down
       if (!IS_PROD) {
         try {
-          const res = await axios.get('/timeline.json');
+          const res = await axios.get(`/${timelineFile}`);
           setTimeline(res.data);
           setFilteredTimeline(res.data);
         } catch (e) {/* ignore */ }
@@ -234,12 +239,32 @@ function App() {
 
         <main className="max-w-5xl mx-auto px-4 py-8">
 
-          {/* Month Filter & Batch Navigation */}
+          {/* Batch Selector */}
           <div className="flex items-center justify-between mb-6 px-1">
             <h2 className="text-sm font-bold text-indigo-900/60 uppercase tracking-widest flex items-center gap-2">
               <Calendar className="w-4 h-4" />
-              October 2025
+              Select Batch
             </h2>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setSelectedBatch('oct2025')}
+                className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 shadow-md ${selectedBatch === 'oct2025'
+                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-indigo-500/30 scale-105'
+                  : 'bg-white text-slate-600 hover:bg-indigo-50 hover:text-indigo-600'
+                  }`}
+              >
+                October 2025
+              </button>
+              <button
+                onClick={() => setSelectedBatch('dec2025')}
+                className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-300 shadow-md ${selectedBatch === 'dec2025'
+                  ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-indigo-500/30 scale-105'
+                  : 'bg-white text-slate-600 hover:bg-indigo-50 hover:text-indigo-600'
+                  }`}
+              >
+                December 2025
+              </button>
+            </div>
           </div>
 
           {/* Date Navigation Bar */}
